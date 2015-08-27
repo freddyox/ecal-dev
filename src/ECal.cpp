@@ -1,0 +1,206 @@
+#include "../include/ECal.hh"
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <cmath>
+
+ECal::ECal(float x, float y){
+  displayx = x;
+  displayy = y;
+
+  center = sf::Vector2f( displayx/2.0, displayy/2.0 );
+  mylar  = 1.0;
+  size42 = 42; 
+  size40 = 40;
+  size38 = 38;
+  s42 = sf::Vector2f( size42, size42 );
+  s40 = sf::Vector2f( size40, size40 );
+  s38 = sf::Vector2f( size38, size38 );
+
+  count = 0;
+  count42 = 0;
+  count40 = 0;
+  count38 = 0;
+  minx = 0;
+  maxx = 0;
+  miny = 0;
+  maxy = 0;
+  countnodes = 0;
+
+  // Setup Modules
+  module42.setSize( s42 );
+  module42.setOrigin( 0.5*size42, 0.5*size42 );
+  module42.setFillColor( sf::Color(166,176,16) );
+  module42.setOutlineThickness( -mylar );
+  module42.setOutlineColor( sf::Color::Black );
+
+  module40.setSize( s40 );
+  module40.setOrigin( 0.5*size40, 0.5*size40 );
+  module40.setFillColor( sf::Color(166,176,16) );
+  module40.setOutlineThickness( -mylar );
+  module40.setOutlineColor( sf::Color::Black );
+
+  module38.setSize( s38 );
+  module38.setOrigin( 0.5*size38, 0.5*size38 );
+  module38.setFillColor( sf::Color(166,176,16) );
+  module38.setOutlineThickness( -mylar );
+  module38.setOutlineColor( sf::Color::Black ); 
+
+  // Make Generic Node
+  increment = 160;
+  nodeR = 5.0;
+  node.setRadius( nodeR );
+  sf::FloatRect origin = node.getLocalBounds();
+  node.setOrigin(0.5*origin.width,0.5*origin.height);
+  node.setFillColor( sf::Color(36,23,115) );
+}
+
+void ECal::initializeECal() {
+  std::ifstream layout;
+  layout.open("ecal_layout.txt");
+  std::string line;
+  if( layout.is_open() ) {
+    while( std::getline( layout, line) && line[0]!='#') {}    
+    //std::cout << line << ", count=" << count << std::endl;
+
+    int type, cell, row, col, x, y, ncol;
+    while( layout >> type >> cell >> row >> col >> x >> y >> ncol ){
+      sf::Vector2f cellposition(0.5*displayx + float(x), 0.5*displayy + float(y));
+      //std::cout << "cell = " << cell << std::endl;
+      
+      maxx = (x > maxx) ? x : maxx;
+      minx = (x < minx) ? x : minx;
+      maxy = (y > maxy) ? y : maxy;
+      miny = (y < miny) ? y : miny;
+
+      if( type == 42 ) {
+	module42.setPosition( cellposition );
+	modules.push_back( module42 );
+	modmap[cell] = module42;
+	count++;
+	count42++;
+      }
+      if( type == 40 ) {
+	module40.setPosition( cellposition );
+	modules.push_back( module40 );
+	modmap[cell] = module40;
+	count++;
+	count40++;
+      }
+      if( type == 38 ) {
+	module38.setPosition( cellposition );
+	modules.push_back( module38 );
+	modmap[cell] = module38;
+	count++;
+	count38++;
+      } 
+    }
+    
+    layout.close();
+  }
+  else {
+    std::cerr << "Error opening ecal_layout.txt" << std::endl;
+  }
+
+  // Make transparent rectangle that boarders ECal
+  float xmoduleoffset = (38 + 40)/2.0;
+  float ymoduleoffset = (38 + 42)/2.0;
+
+  sf::Vector2f bsize( float(maxx - minx) + xmoduleoffset, float(maxy - miny ) + ymoduleoffset );
+  sf::Vector2f offset( float(maxx - abs(minx)), float(maxy - abs(miny)));
+  sf::Vector2f boarderPos( center.x + offset.x*0.5 + 0.5*mylar, center.y + offset.y*0.5 - mylar);
+
+  boarder.setSize( bsize ); 
+  boarder.setFillColor( sf::Color(255,0,0,25) );
+  boarder.setOrigin(0.5*bsize.x,0.5*bsize.y);
+  boarder.setPosition( boarderPos );
+
+  // Make nodes, excluding the perimeter
+  sf::Vector2f boarderCenter = boarder.getPosition();
+  sf::Vector2f boarderSize(0.5*boarder.getSize().x, 0.5*boarder.getSize().y);
+
+  float totalX = 2.0*boarderSize.x - increment;
+  float totalY = 2.0*boarderSize.y - increment;
+  int numberX = int(totalX)/increment + 1; 
+  int numberY = int(totalY)/increment + 1;
+
+  // Start Top Left then move in by (16,16), then iterate
+  sf::Vector2f inc(increment,increment);
+  sf::Vector2f start = boarderCenter - boarderSize + inc;
+  
+  // Rows then columns
+  for( int row=0; row<numberY; row++ ) {
+    for( int col=0; col<numberX; col++ ) {
+      sf::Vector2f tempnode(start.x + col*increment, start.y + row*increment );
+      bool onlyone = false;
+      for( modit = modules.begin(); modit != modules.end(); modit++ ) {
+	sf::Vector2f tempmod = (*modit).getPosition();
+	sf::Vector2f distance = tempnode - tempmod;
+	float D = sqrt(pow(distance.x,2)+pow(distance.y,2));
+	if( D <= 0.6*size42 && !onlyone ) {
+	  onlyone = true;
+	  countnodes++;
+	  //node.setPosition( tempnode );
+	  node.setPosition( (*modit).getPosition() );
+	  nodes.push_back( node );	
+	}
+      }
+
+    }
+  }
+}
+void ECal::triggerlogic() {
+    sf::Vector2f nodetemp = nodes[10].getPosition();
+
+    for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ){
+      sf::Vector2f temp = (*mapit).second.getPosition();
+      sf::Vector2f D = nodetemp - temp;
+      float dis = sqrt(pow(D.x,2)+pow(D.y,2));
+ 
+      if(dis<5*size42 && cellset.size() <= 63){
+	cellset.insert( (*mapit).first );
+	(*mapit).second.setOutlineColor(sf::Color::Red);
+
+	//node.setPosition( mapit->second.getPosition() );
+	//logic.push_back( node );
+      }    
+    } 
+    if(cellset.size() > 0) {
+      std::cout << cellset.size() << std::endl;
+    }
+}
+
+void ECal::specs(){
+  // Spit out useful ECal information:
+  std::cout << "Total modules: " << count << std::endl;
+  std::cout << "Type 42: " << count42 << std::endl;
+  std::cout << "Type 40: " << count40 << std::endl;
+  std::cout << "Type 38: " << count38 << std::endl;
+
+  std::cout << "minx,maxx,miny,maxy=" << minx << ", " << maxx << ", " 
+  	    << miny << ", " << maxy << std::endl;
+
+  std::cout << "Size of box surrounding ECal: " << boarder.getSize().x << ", " << 
+    boarder.getSize().y << std::endl;
+
+  std::cout << "Number of nodes with " << increment << " mm spacing: " << countnodes << std::endl;
+}
+
+void ECal::draw(sf::RenderTarget& target, sf::RenderStates) const{
+  //std::vector<sf::RectangleShape>::const_iterator cit;
+  // for( cit = modules.begin(); cit != modules.end(); cit++ ){
+  //   target.draw(*cit);
+  // }
+  std::map<int,sf::RectangleShape>::const_iterator cit;
+  for( cit = modmap.begin(); cit != modmap.end(); cit++ ){
+    target.draw( cit->second );
+  }
+  std::vector<sf::CircleShape>::const_iterator cit1;
+  for( cit1 = nodes.begin(); cit1 != nodes.end(); cit1++ ){
+    target.draw(*cit1);
+  }
+  for( cit1 = logic.begin(); cit1 != logic.end(); cit1++ ){
+    target.draw(*cit1);
+  }
+  target.draw( boarder );
+}
