@@ -17,18 +17,23 @@ private:
   int minx, maxx, miny, maxy;
   int countnodes;
 
-  std::set<int> cellset;
-  std::set<int>::iterator cellit;
-  std::map<int,sf::RectangleShape> modmap;
-  std::map<int,sf::RectangleShape>::iterator mapit;
-
-  // MODULE Properties
+  // MODULE and LOGIC Properties
   sf::Vector2f s42, s40, s38;
   sf::RectangleShape module42, module40, module38;
   sf::RectangleShape boarder;
 
   std::vector<sf::RectangleShape> modules;
   std::vector<sf::RectangleShape>::iterator modit;
+  std::map<int,sf::RectangleShape> modmap, cluster;
+  std::map<int,sf::RectangleShape>::iterator mapit, clustit, clusterit;
+
+  std::vector<std::map<int,sf::RectangleShape> > global_logic;
+  std::vector<std::map<int,sf::RectangleShape> >::iterator glit, glit_rest;
+
+  std::vector<sf::Color> colors, boardercolors;
+  sf::VertexArray lines;
+  std::vector<sf::VertexArray> boarderthelogic;
+  std::vector<std::vector<sf::VertexArray> > manyboarders;
 
   // NODE Properties
   float nodeR;
@@ -37,14 +42,26 @@ private:
   std::vector<sf::CircleShape> nodes,logic;
   std::vector<sf::CircleShape>::iterator nodit;
 
+
+  // Control drawings with keyboard 
+  float time;
+  bool logboarders;
+  bool logcolors;
+  bool crescent;
+  bool control;
+  int count1,count2,count3;
+
 public:
   ECal(float,float);
   ~ECal() {};
 
   void draw(sf::RenderTarget&, sf::RenderStates) const;
+  void controldrawings(sf::Time);
   void initializeECal();
   void specs();
   void triggerlogic();
-
+  void colorthelogic();
+  void logicboarder();
+  bool onoroff() {return crescent;}
 };
 #endif

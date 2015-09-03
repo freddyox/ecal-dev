@@ -29,6 +29,8 @@ int main() {
   ECal ecal( window.getSize().x, window.getSize().y );
   ecal.initializeECal();
   ecal.triggerlogic();
+  ecal.colorthelogic();
+  ecal.logicboarder();
   //ecal.specs();
 
   while( window.isOpen() ) {
@@ -38,9 +40,16 @@ int main() {
 	window.close();
       }
     }
+    if( !ecal.onoroff() ) 
+      window.clear(sf::Color(220,220,220));
+    else
+      window.clear(sf::Color::Black);
 
-    window.clear(sf::Color::White);
     window.setView( view );
+
+    // UPDATING
+    sf::Time elapsed = clock.restart();
+    ecal.controldrawings(elapsed);
 
     // UPDATING CAMERA
     if( sf::Mouse::isButtonPressed(sf::Mouse::Left) ) {
@@ -61,16 +70,6 @@ int main() {
     if( sf::Keyboard::isKeyPressed(sf::Keyboard::Right) ) {
       view.move( -10, -0 );
     }
-    // if( sf::Keyboard::isKeyPressed(sf::Keyboard::Up) ) {
-    //   view.zoom( 0.95 );
-    // }
-    // if( sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ) {
-    //   view.zoom( 1.05 );
-    // }
-    // if( sf::Mouse::isButtonPressed(sf::Mouse::Left) ) {
-    //   sf::Vector2i mouse = sf::Mouse::getPosition(window);
-    //   view.setCenter(window.mapPixelToCoords(mouse));
-    // }
     
     // DRAWINGS
     window.draw(ecal);      
