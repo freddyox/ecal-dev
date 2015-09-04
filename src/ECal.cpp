@@ -65,7 +65,7 @@ ECal::ECal(float x, float y){
   node.setOrigin(0.5*origin.width,0.5*origin.height);
   node.setFillColor( sf::Color(36,23,115) );
 
-  // Initialize a color vector
+  // Initialize color vectors
   sf::Color red = sf::Color(51,0,0);
   sf::Color yellow = sf::Color(51,51,0);
   sf::Color blue = sf::Color(0,0,51);
@@ -85,9 +85,21 @@ ECal::ECal(float x, float y){
   sf::Color green_sfml = sf::Color::Green;
   sf::Color cyan_sfml = sf::Color::Cyan;
   sf::Color magenta_sfml = sf::Color::Magenta; 
+  sf::Color orange_sfml = sf::Color(255,128,0);
+  sf::Color lightgreen_sfml = sf::Color(24,218,114);
+  sf::Color purple_sfml = sf::Color(111,16,195);
+  sf::Color pink_sfml = sf::Color(232,78,238);
+  sf::Color lightblue_sfml = sf::Color(8,122,164);
+  sf::Color lightpink_sfml = sf::Color(242,124,210);
+  boardercolors.push_back( lightblue_sfml );
   boardercolors.push_back( yellow_sfml );
+  boardercolors.push_back( pink_sfml );
   boardercolors.push_back( green_sfml );
+  boardercolors.push_back( purple_sfml );
+  boardercolors.push_back( orange_sfml );
   boardercolors.push_back( cyan_sfml );
+  boardercolors.push_back( lightpink_sfml );
+  boardercolors.push_back( lightgreen_sfml );
   boardercolors.push_back( red_sfml );
   boardercolors.push_back( blue_sfml );
   boardercolors.push_back( green_sfml );
@@ -205,7 +217,7 @@ void ECal::initializeECal() {
 void ECal::triggerlogic() {
 
   //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=35; i<45; i++ ) {
+  for( int i=48; i<49; i++ ) {
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
