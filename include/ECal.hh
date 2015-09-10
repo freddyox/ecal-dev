@@ -25,11 +25,12 @@ private:
   std::vector<sf::RectangleShape> modules;
   std::vector<sf::RectangleShape>::iterator modit;
   std::map<int,sf::RectangleShape> modmap, cluster;
-  std::map<int,sf::RectangleShape>::iterator mapit, clustit, clusterit;
+  std::map<int,sf::RectangleShape>::iterator mapit, clustit, clusterit, lastone;
 
   std::vector<std::map<int,sf::RectangleShape> > global_logic;
   std::vector<std::map<int,sf::RectangleShape> >::iterator glit, glit_rest;
 
+  // Boarders
   std::vector<sf::Color> colors, boardercolors;
   sf::VertexArray lines;
   std::vector<sf::VertexArray> boarderthelogic;
@@ -42,14 +43,13 @@ private:
   std::vector<sf::CircleShape> nodes,logic;
   std::vector<sf::CircleShape>::iterator nodit;
 
-
   // Control drawings with keyboard 
   float time;
   bool logboarders;
   bool logcolors;
   bool crescent;
   bool control;
-  int count1,count2,count3;
+  int count1, count2, count3;
 
 public:
   ECal(float,float);

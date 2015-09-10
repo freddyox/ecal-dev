@@ -217,48 +217,72 @@ void ECal::initializeECal() {
 void ECal::triggerlogic() {
 
   //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=48; i<49; i++ ) {
+  for( int i=13; i<14; i++ ) {
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
-    bool first = false;
     int n = 0;
+    int m = 0;
+    std::map<int,int> cellsafe;
+    std::map<int,int>::iterator cells;
+    std::set<int> cells_taken;
+    std::set<int>::iterator cellset;
 
-    while( cluster.size() < 64 ) {
-      for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ){
-	sf::Vector2f temp = (*mapit).second.getPosition();
-	sf::Vector2f D = nodetemp - temp;
-	float distance = sqrt( pow(D.x,2) + pow(D.y,2) );
+    bool taken = true;
 
-	centerlogic = temp;
-	
-	// Find starting point, or center of a Logic Cluster
-	if( distance < 0.5*size38 && cluster.size() < 64 ) {
-	  cluster[mapit->first] = mapit->second;
-	
-	  for( clusterit = cluster.begin(); clusterit != cluster.end(); clusterit++ ) {
-	    centerlogic = clusterit->second.getPosition();
-	    n++;
+    cluster.clear();
+    cellsafe.clear();
+    cells_taken.clear();
 
-	    // Get the closest modules and add to Logic Cluster
-	    for( clustit = modmap.begin(); clustit != modmap.end(); clustit++ ) {
-	      if( clustit != mapit && clustit != clusterit ){
-		neighbors = clustit->second.getPosition();
-		D = neighbors - centerlogic;
-		distance = sqrt( pow(D.x,2) + pow(D.y,2) );
-	      
-		//if( distance < 4.5*size42 && cluster.size() < 64 ) {
-		if( fabs(D.x) < 4.0*size42 && fabs(D.y) < 4.0*size42 && cluster.size() < 64 ) {
-		  cluster[clustit->first] = clustit->second;
-		} 
-	      }
-	    }
-	  
-	  }
-	}
-
+    // Locate the center of a logic pattern
+    float mindistance;
+    int closest_cell = -1;
+    for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ){
+      sf::Vector2f temp = (*mapit).second.getPosition();
+      sf::Vector2f D = nodetemp - temp;
+      float distance = sqrt( pow(D.x,2) + pow(D.y,2) );
+      if( closest_cell == -1 || distance < mindistance ){
+	mindistance = distance;
+	closest_cell = mapit->first;
       }
     }
+    cluster[n++] = modmap[closest_cell];
+    cellsafe[m++] = closest_cell;
+    cells_taken.insert( closest_cell );
+    
+    // Nearest neighbors routine
+    clusterit = cluster.begin();
+    while( clusterit != cluster.end() && cluster.size() < 64 ){
+      centerlogic = clusterit->second.getPosition();
+      
+      // Get the closest modules and add to Logic Cluster
+      for( clustit = modmap.begin(); clustit != modmap.end(); clustit++ ) {
+	if( clustit != clusterit ){
+	  taken = true;
+	  neighbors = clustit->second.getPosition();
+	  sf::Vector2f Dclust = neighbors - centerlogic;
+	  sf::Vector2f Dnode = neighbors - nodetemp;
+	  float distance = sqrt( pow(Dclust.x,2) + pow(Dclust.y,2) );
+	  
+	  if( fabs(Dnode.x) < 4.1*size42 && fabs(Dnode.y) < 4.1*size42 && cluster.size() < 64 && distance < 1.3*size42 ) {
+	    for( cellset = cells_taken.begin(); cellset != cells_taken.end(); cellset++ ) {
+	      if( clustit->first == *cellset ) taken = true;
+	      else taken = false; 
+	    }
+	    if( !taken ) {
+	      if( cells_taken.size() < 64 ) {
+		cellsafe[ m++ ] = clustit->first;
+		cluster[ n++ ] = clustit->second;
+		cells_taken.insert( clustit->first );
+		taken = true;
+	      }
+	    }
+	  }	    	  
+	}   
+      } 
+      ++clusterit;
+    }
+
     // Change color of clusters: 
     // This just gives a cluster color properties. Overlapping effects are
     // handled in colorthelogic() routine. 
@@ -267,9 +291,12 @@ void ECal::triggerlogic() {
       (*clustit).second.setFillColor( colors[temp] );
     }
 
-    // Add to global logic vector, and clear current cluster in order to do the next one
+    for( cells = cellsafe.begin(); cells != cellsafe.end(); cells++ ) {
+      std::cout << cells->first << ", " << cells->second << std::endl;
+    }
+    
+    // Add to global logic vector
     global_logic.push_back( cluster );
-    cluster.clear();
   }
 }
 
@@ -317,12 +344,9 @@ void ECal::logicboarder() {
   std::map<float, std::set<float> > rows_xpos, rows_xpos_mm;
   std::map<float, std::set<float> >::iterator rowit, rowit_mm;
 
-  std::map<float, std::vector<sf::RectangleShape> > rows_new;
-  std::map<float, std::vector<sf::RectangleShape> >::iterator rowit_new;
-
-  // Necessary to carry module size of max/min
-  std::vector<sf::RectangleShape> mm_modules;
-  std::vector<sf::RectangleShape>::iterator mm_modit;
+  // carry module size
+  std::map<float, sf::RectangleShape> rows_new;
+  std::map<float, sf::RectangleShape>::iterator rowit_new;
 
   float tempy = 0;
   int ncolor = -1;
@@ -359,7 +383,6 @@ void ECal::logicboarder() {
 	last = true;
 	if(last) {
 	  maxx = temp.x;
-	  mm_modules.push_back( clustit->second );
 	  xvalues.insert( temp.x );
 	  last = false;
 	}
@@ -377,8 +400,10 @@ void ECal::logicboarder() {
 	rows_xpos[ currenty ] = xvalues;
 	maxminx.insert(minx);
 	maxminx.insert(maxx);
+
 	rows_xpos_mm[ currenty ] = maxminx;	
-	rows_new[ currenty ] = mm_modules;
+	rows_new[ currenty ] = clustit->second;
+
 	xvalues.clear();
 	maxminx.clear();
 	maxx = -1;
@@ -396,10 +421,14 @@ void ECal::logicboarder() {
 
       for( rowit_new = rows_new.begin(); rowit_new != rows_new.end(); rowit_new++ ) {
 	if(  rowit_mm->first == rowit_new->first ) {
-	  // Get module size
-	  std::vector<sf::RectangleShape> sizet = rowit_new->second;
-	  sf::Vector2f size = sizet[0].getSize();
-	
+	  // Get module size of current & next row
+	  // current
+	  sf::Vector2f size = rowit_new->second.getSize();
+	  // peak at next
+	  std::map<float, sf::RectangleShape>::iterator mdupe = rowit_new;
+	  mdupe++;
+	  sf::Vector2f nsize = mdupe->second.getSize();
+
 	  // Grab max and min x values 
 	  std::set<float> tempx = rowit_mm->second;
 	  std::set<float>::iterator it = tempx.begin();
@@ -413,16 +442,25 @@ void ECal::logicboarder() {
 	  std::advance(nextit, 1);
 	  float nextmax = *nextit;
 
+	  //std::cout << min << ", " << max << ", " << nextmin << ", " << nextmax << ", " << tempy <<  std::endl;
+
 	  // Handle the exception when max = min, i.e. one cell in a row
 	  if( max == 10000 ) {
 	    max = min;
 	  }
-	  if( offsetYorN % 2 == 0 ){
-	    yoffset = 0;
+
+	  // Handle overlapping boarders to make it easier to visualize
+	  switch( offsetYorN % 3 ) {
+	  case 0 : yoffset = 0.0;
+	    break;
+	  case 1 : yoffset = 1.0;
+	    break;
+	  case 2 : yoffset = -1.0;
+	    break;
+	  default : yoffset = 0.0;
+	    break;
 	  }
-	  else{
-	    yoffset = 1.0;
-	  }
+	  
 	  // Draw the boardering lines using Vertex Arrays
 	  // top
 	  if( rowit_mm == rows_xpos_mm.begin() ) {
@@ -455,26 +493,27 @@ void ECal::logicboarder() {
 	  boarderthelogic.push_back( lines );
 	  // Scattered horizontal lines
 	  // right
-	  if( dupe != rows_xpos_mm.end() ) {
+	  if( dupe != rows_xpos_mm.end() && nsize.x > 0 ) {
 	    lines[0].position = sf::Vector2f( max+0.5*size.x-yoffset, tempy+0.5*size.x-yoffset );
 	    lines[0].color = boardercolors[ tempC ];
-	    lines[1].position = sf::Vector2f( nextmax+0.5*size.x-yoffset, nexty-0.5*size.x-yoffset );
+	    lines[1].position = sf::Vector2f( nextmax+0.5*nsize.x-yoffset, nexty-0.5*nsize.x-yoffset );
 	    lines[1].color = boardercolors[ tempC ];
 	    boarderthelogic.push_back( lines );
 	    // left
 	    lines[0].position = sf::Vector2f( min-0.5*size.x-yoffset, tempy+0.5*size.x-yoffset );
 	    lines[0].color = boardercolors[ tempC ];
-	    lines[1].position = sf::Vector2f( nextmin-0.5*size.x-yoffset, nexty-0.5*size.x-yoffset );
+	    lines[1].position = sf::Vector2f( nextmin-0.5*nsize.x-yoffset, nexty-0.5*nsize.x-yoffset );
 	    lines[1].color = boardercolors[ tempC ];
 	    boarderthelogic.push_back( lines );
 	  }
 	}
       }
-    }    
+    }  
+    maxlogicy = 0.0;
     manyboarders.push_back( boarderthelogic );
     boarderthelogic.clear();
     rows_xpos_mm.clear();
-    mm_modules.clear();
+    rows_new.clear();
   }  
 }
 

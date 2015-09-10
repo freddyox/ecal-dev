@@ -29,8 +29,8 @@ int main() {
   ECal ecal( window.getSize().x, window.getSize().y );
   ecal.initializeECal();
   ecal.triggerlogic();
-  ecal.colorthelogic();
-  ecal.logicboarder();
+  // ecal.colorthelogic();
+  //ecal.logicboarder();
   //ecal.specs();
 
   while( window.isOpen() ) {
@@ -50,7 +50,6 @@ int main() {
     // UPDATING
     sf::Time elapsed = clock.restart();
     ecal.controldrawings(elapsed);
-
     // UPDATING CAMERA
     if( sf::Mouse::isButtonPressed(sf::Mouse::Left) ) {
       view.zoom( 0.95 );
