@@ -1,5 +1,6 @@
 #include "../include/ECal.hh"
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <iostream>
 #include <cmath>
@@ -28,6 +29,7 @@ ECal::ECal(float x, float y){
   s40 = sf::Vector2f( size40, size40 );
   s38 = sf::Vector2f( size38, size38 );
 
+  // Useful counting variables
   count = 0;
   count42 = 0;
   count40 = 0;
@@ -58,7 +60,14 @@ ECal::ECal(float x, float y){
   module38.setOutlineColor( sf::Color::Black ); 
 
   // Make Generic Node
-  increment = 160; 
+  maxclustersize = 32;
+  increment = 80; 
+  if( maxclustersize == 32 ) {
+    clustercut = 2.1;
+  }
+  if( maxclustersize == 64 ) {
+    clustercut = 4.1;
+  }
   nodeR = 5.0;
   node.setRadius( nodeR );
   sf::FloatRect origin = node.getLocalBounds();
@@ -105,6 +114,14 @@ ECal::ECal(float x, float y){
   boardercolors.push_back( green_sfml );
   boardercolors.push_back( magenta_sfml );
 
+  // Handle text indices on nodes
+  if( !font.loadFromFile("fonts/arial.ttf")) {
+    std::cerr << "ERROR: Font did not load properly." << std::endl;
+  }
+  textind.setFont(font);
+  textind.setCharacterSize( 15 );
+  textind.setColor( sf::Color::White );
+
   // Handle boarders
   lines = sf::VertexArray(sf::LinesStrip,2);
 
@@ -114,23 +131,26 @@ ECal::ECal(float x, float y){
   logcolors = false;
   control = false;
   crescent = false;
+  indexthenodes = false;
   count1 = 0;
   count2 = 0;
   count3 = 0;
+  count4 = 0;
 }
 
 void ECal::initializeECal() {
   std::ifstream layout;
   layout.open("ecal_layout.txt");
   std::string line;
+  float yoffset = 40.0;
   if( layout.is_open() ) {
     while( std::getline( layout, line) && line[0]!='#') {}    
-    //std::cout << line << ", count=" << count << std::endl;
-
+    
     int type, cell, row, col, x, y, ncol;
     while( layout >> type >> cell >> row >> col >> x >> y >> ncol ){
-      sf::Vector2f cellposition(0.5*displayx + float(x), 0.5*displayy + float(y));
-      //std::cout << "cell = " << cell << std::endl;
+      y *= -1;
+      y += yoffset;
+      sf::Vector2f cellposition( 0.5*displayx + float(x), 0.5*displayy + float(y) );
       
       maxx = (x > maxx) ? x : maxx;
       minx = (x < minx) ? x : minx;
@@ -159,20 +179,23 @@ void ECal::initializeECal() {
 	count38++;
       } 
     }
-    
     layout.close();
   }
   else {
     std::cerr << "Error opening ecal_layout.txt" << std::endl;
   }
-
+  ecalminy = miny;
+  ecalmaxy = maxy;
+  ecalminx = minx;
+  ecalmaxx = maxx;
+  
   // Make transparent rectangle that boarders ECal
   float xmoduleoffset = (38 + 40) / 2.0;
   float ymoduleoffset = (38 + 42) / 2.0;
 
   sf::Vector2f bsize( float(maxx - minx) + xmoduleoffset, float(maxy - miny ) + ymoduleoffset );
   sf::Vector2f offset( float(maxx - abs(minx)), float(maxy - abs(miny)));
-  sf::Vector2f boarderPos( center.x + offset.x*0.5 + 0.5*mylar, center.y + offset.y*0.5 - mylar);
+  sf::Vector2f boarderPos( center.x + offset.x*0.5 + 0.5*mylar, center.y + offset.y*0.5 + mylar );
 
   boarder.setSize( bsize ); 
   boarder.setFillColor( sf::Color(255,0,0,25) );
@@ -188,36 +211,47 @@ void ECal::initializeECal() {
   int numberX = int(totalX)/increment + 1; 
   int numberY = int(totalY)/increment + 1;
 
-  // Start Top Left then move in by (16,16), then iterate
+  // Start Top Left then move in by (increment,increment), then iterate
   sf::Vector2f inc(increment,increment);
   sf::Vector2f start = boarderCenter - boarderSize + inc;
-  
+  float nodeYoffset = 0.0;
   // Rows then columns
   for( int row=0; row<numberY; row++ ) {
     for( int col=0; col<numberX; col++ ) {
-      sf::Vector2f tempnode(start.x + col*increment, start.y + row*increment );
-      bool onlyone = false;
+      sf::Vector2f tempnode(start.x + col*increment, start.y + row*increment + fabs(nodeYoffset) );
+
       for( modit = modules.begin(); modit != modules.end(); modit++ ) {
+	// Peak at next row
+	if( col > numberX-3 ) {
+	  std::vector<sf::RectangleShape>::iterator peak = modit;
+	  peak++;
+	  float currentsize = modit->getSize().y;
+	  float nextsize = peak->getSize().y;
+	  //std::cout << currentsize << ", " << nextsize << std::endl;
+	  if( nextsize != currentsize && nextsize > 0 && currentsize > 0 ) {
+	    nodeYoffset = (nextsize - currentsize)+1;
+	  }
+	}
 	sf::Vector2f tempmod = (*modit).getPosition();
 	sf::Vector2f distance = tempnode - tempmod;
+	sf::Vector2f size = modit->getSize();
 	float D = sqrt(pow(distance.x,2)+pow(distance.y,2));
-	if( D <= 0.6*size42 && !onlyone ) {
-	  onlyone = true;
+	if( fabs( distance.x ) < 0.5*size.x && fabs( distance.y ) < 0.5*size.y ){
 	  countnodes++;
-	  //node.setPosition( tempnode );
-	  node.setPosition( (*modit).getPosition() );
+	  node.setPosition( tempnode );
+	  //node.setPosition( (*modit).getPosition() );
 	  nodes.push_back( node );	
 	}
       }
-
+      
     }
   }
-}
+}  
 
 void ECal::triggerlogic() {
 
   //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=13; i<14; i++ ) {
+  for( int i=30; i<38; i++ ) {
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
@@ -233,6 +267,7 @@ void ECal::triggerlogic() {
     cluster.clear();
     cellsafe.clear();
     cells_taken.clear();
+    final.clear();
 
     // Locate the center of a logic pattern
     float mindistance;
@@ -252,29 +287,30 @@ void ECal::triggerlogic() {
     
     // Nearest neighbors routine
     clusterit = cluster.begin();
-    while( clusterit != cluster.end() && cluster.size() < 64 ){
+    while( clusterit != cluster.end() && cluster.size() < maxclustersize ){
       centerlogic = clusterit->second.getPosition();
-      
+      int clusterindex = clusterit->first; //position in cluster array
+      int clustercell = cellsafe[clusterindex];
+
       // Get the closest modules and add to Logic Cluster
       for( clustit = modmap.begin(); clustit != modmap.end(); clustit++ ) {
-	if( clustit != clusterit ){
+	int clustcell = clustit->first;
+	if( clustcell != clustercell ){
 	  taken = true;
 	  neighbors = clustit->second.getPosition();
 	  sf::Vector2f Dclust = neighbors - centerlogic;
 	  sf::Vector2f Dnode = neighbors - nodetemp;
 	  float distance = sqrt( pow(Dclust.x,2) + pow(Dclust.y,2) );
 	  
-	  if( fabs(Dnode.x) < 4.1*size42 && fabs(Dnode.y) < 4.1*size42 && cluster.size() < 64 && distance < 1.3*size42 ) {
-	    for( cellset = cells_taken.begin(); cellset != cells_taken.end(); cellset++ ) {
-	      if( clustit->first == *cellset ) taken = true;
-	      else taken = false; 
-	    }
+	  if( fabs(Dnode.x) < clustercut*size42 && fabs(Dnode.y) < clustercut*size42 && cluster.size() < maxclustersize && distance < 1.3*size42 ) {
+
+	    taken =  cells_taken.find( clustit->first ) != cells_taken.end(); 
+	    
 	    if( !taken ) {
-	      if( cells_taken.size() < 64 ) {
+	      if( cells_taken.size() < maxclustersize ) {
 		cellsafe[ m++ ] = clustit->first;
 		cluster[ n++ ] = clustit->second;
 		cells_taken.insert( clustit->first );
-		taken = true;
 	      }
 	    }
 	  }	    	  
@@ -282,21 +318,22 @@ void ECal::triggerlogic() {
       } 
       ++clusterit;
     }
-
-    // Change color of clusters: 
-    // This just gives a cluster color properties. Overlapping effects are
-    // handled in colorthelogic() routine. 
+    
+    // Change color of clusters - overlaps handled in colorthelogic() 
+    // ***this routine is necessary to make a map of cell number and shape
     for( clustit = cluster.begin(); clustit != cluster.end(); clustit++ ) {
       int temp = i % colors.size();
       (*clustit).second.setFillColor( colors[temp] );
+      for( cells = cellsafe.begin(); cells != cellsafe.end(); cells++ ) {
+	// counting variable must be equal
+    	if( clustit->first == cells->first ) {
+    	  // make the final map 
+    	  final[cells->second] = clustit->second;
+    	}
+      }
     }
-
-    for( cells = cellsafe.begin(); cells != cellsafe.end(); cells++ ) {
-      std::cout << cells->first << ", " << cells->second << std::endl;
-    }
-    
-    // Add to global logic vector
-    global_logic.push_back( cluster );
+    // Add to global logic vector used throughout the rest of the code
+    global_logic.push_back( final );
   }
 }
 
@@ -334,9 +371,6 @@ void ECal::logicboarder() {
   maxx = -1;
   minx = 10000;
 
-  float maxlogicy = -1;
-  bool last = true;
-
   std::set<float> xvalues, maxminx;
   std::set<float>::iterator sit;
 
@@ -352,6 +386,7 @@ void ECal::logicboarder() {
   int ncolor = -1;
   float yoffset = 1.0;
   int offsetYorN = -1;
+  float maxlogicy = -1000;
 
   // The following routine creates a map where the key is the y-coordinate of
   // a cell and the value is a set which contains the max/min x-coordinates of 
@@ -360,10 +395,11 @@ void ECal::logicboarder() {
   for( glit = global_logic.begin(); glit != global_logic.end(); glit++ ) {
     ncolor++;
     offsetYorN++;
-
     int tempC = ncolor % boardercolors.size();
+    float first = true;
+
     for( clustit = glit->begin(); clustit != glit->end(); clustit++ ) {
-      
+
       sf::Vector2f temp = clustit->second.getPosition();     
       sf::Vector2f modulesize = clustit->second.getSize();
 
@@ -372,45 +408,49 @@ void ECal::logicboarder() {
       float currenty = clustit->second.getPosition().y;
       float nexty = nextelement->second.getPosition().y;
 
-      if( fabs(temp.y) > maxlogicy ) {
-	maxlogicy = temp.y;
+      if( temp.y > maxlogicy ) {
+      	maxlogicy = temp.y;
       }
       else{
-	maxlogicy = maxlogicy;
+      	maxlogicy = maxlogicy;
       }
       
       if( currenty != nexty ) {
-	last = true;
-	if(last) {
-	  maxx = temp.x;
-	  xvalues.insert( temp.x );
-	  last = false;
-	}
-      }
-      
-      if( currenty == nexty ) {
+	maxx = temp.x;
 	xvalues.insert( temp.x );
-	if( temp.x < minx ) {
-	  minx = temp.x;
-	}
-	else 
-	  minx = minx;
+      }
+
+      if( currenty == nexty  ) {
+      	xvalues.insert( temp.x );
+      	if( temp.x < minx ) {
+      	  minx = temp.x;
+      	}
+      	else 
+      	  minx = minx;
       }
       else {	
 	rows_xpos[ currenty ] = xvalues;
 	maxminx.insert(minx);
 	maxminx.insert(maxx);
-
+	
 	rows_xpos_mm[ currenty ] = maxminx;	
 	rows_new[ currenty ] = clustit->second;
-
+	
+	minx = 10000;
+	maxx = -1;
 	xvalues.clear();
 	maxminx.clear();
-	maxx = -1;
-	minx = 10000;
-      }    
+      }   
     }
-  
+
+    // for( rowit_mm = rows_xpos_mm.begin(); rowit_mm != rows_xpos_mm.end(); rowit_mm++ ) {
+    //   std::cout << "y= " << rowit_mm->first << std::endl;
+    //   for( sit = rowit_mm->second.begin(); sit != rowit_mm->second.end(); sit++ ) {
+    // 	std::cout << *sit << std::endl;
+    //   }
+    // }
+
+
     // Use this mapping to create a boarder around a logic pattern:
     for( rowit_mm = rows_xpos_mm.begin(); rowit_mm != rows_xpos_mm.end(); rowit_mm++ ) {
       float tempy = rowit_mm->first;
@@ -444,23 +484,33 @@ void ECal::logicboarder() {
 
 	  //std::cout << min << ", " << max << ", " << nextmin << ", " << nextmax << ", " << tempy <<  std::endl;
 
-	  // Handle the exception when max = min, i.e. one cell in a row
-	  if( max == 10000 ) {
-	    max = min;
-	  }
-
 	  // Handle overlapping boarders to make it easier to visualize
-	  switch( offsetYorN % 3 ) {
+	  switch( offsetYorN % 6 ) {
 	  case 0 : yoffset = 0.0;
 	    break;
 	  case 1 : yoffset = 1.0;
 	    break;
 	  case 2 : yoffset = -1.0;
 	    break;
+	  case 3 : yoffset = 0.5;
+	    break;
+	  case 4 : yoffset = -0.5;
+	    break;
+	  case 5 : yoffset = +0.75;
+	    break;
+	  case 6: yoffset = -0.75;
+	    break;
 	  default : yoffset = 0.0;
 	    break;
 	  }
 	  
+	  if( max == 10000 ) {
+	    max = min;
+	  }
+	  if( nextmax == 10000 ) {
+	    nextmax = nextmin;
+	  }
+
 	  // Draw the boardering lines using Vertex Arrays
 	  // top
 	  if( rowit_mm == rows_xpos_mm.begin() ) {
@@ -509,7 +559,6 @@ void ECal::logicboarder() {
 	}
       }
     }  
-    maxlogicy = 0.0;
     manyboarders.push_back( boarderthelogic );
     boarderthelogic.clear();
     rows_xpos_mm.clear();
@@ -524,13 +573,15 @@ void ECal::specs(){
   std::cout << "Type 40: " << count40 << std::endl;
   std::cout << "Type 38: " << count38 << std::endl;
 
-  std::cout << "minx,maxx,miny,maxy=" << minx << ", " << maxx << ", " 
-  	    << miny << ", " << maxy << std::endl;
+  std::cout << "From center of red box - minx, maxx, miny, maxy = " << ecalminx << ", " << ecalmaxx << ", " 
+  	    << ecalminy << ", " << ecalmaxy << std::endl;
 
   std::cout << "Size of box surrounding ECal: " << boarder.getSize().x << ", " << 
     boarder.getSize().y << std::endl;
 
   std::cout << "Number of nodes with " << increment << " mm spacing: " << countnodes << std::endl;
+
+  std::cout << "Cluster sum = " << maxclustersize << " found by using rectangular cuts of size " << clustercut << std::endl;
 }
 
 void ECal::controldrawings(sf::Time elapsed) {
@@ -566,6 +617,37 @@ void ECal::controldrawings(sf::Time elapsed) {
 	crescent = false;
       }
     } 
+    if( sf::Keyboard::isKeyPressed(sf::Keyboard::X) ) {
+      indexthenodes = true;
+      control = false;
+      time = 0;
+      count4++;
+      if(count4%2==0){
+    	indexthenodes = false;
+      }
+    } 
+  }
+}
+
+void ECal::indexnodes() {
+  int nodeindex = 1;
+  
+  sf::Vector2f offset( 2*nodeR, -2*nodeR );
+  
+  for( nodit = nodes.begin(); nodit != nodes.end(); nodit++ ) { 
+    // Handle the index text - int conversion to string
+    std::stringstream temp;
+    temp << nodeindex;
+    std::string indexstring = temp.str();
+    nodeindex++;
+
+    // Grab node position
+    sf::Vector2f tempposition = nodit->getPosition();
+    sf::Vector2f final = tempposition + offset;
+    // Handle the text properties
+    textind.setString( indexstring );
+    textind.setPosition( final.x, final.y );
+    textnodes.push_back( textind );
   }
 }
 
@@ -594,10 +676,6 @@ void ECal::draw(sf::RenderTarget& target, sf::RenderStates) const{
     target.draw(*cit1);
   }
 
-  for( cit1 = logic.begin(); cit1 != logic.end(); cit1++ ){
-    target.draw(*cit1);
-  }
-
   std::vector<std::vector<sf::VertexArray> >::const_iterator cit3;
   std::vector<sf::VertexArray>::const_iterator cit2;
   if( logboarders ) {
@@ -605,6 +683,13 @@ void ECal::draw(sf::RenderTarget& target, sf::RenderStates) const{
       for( cit2 = cit3->begin(); cit2 != cit3->end(); cit2++ ) {
 	target.draw(*cit2);
       }
+    }
+  }
+
+  std::vector<sf::Text>::const_iterator textit;
+  if( indexthenodes ) {
+    for( textit = textnodes.begin(); textit != textnodes.end(); textit++ ) {
+      target.draw( *textit );
     }
   }
 }

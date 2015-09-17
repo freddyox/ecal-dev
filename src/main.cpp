@@ -29,8 +29,9 @@ int main() {
   ECal ecal( window.getSize().x, window.getSize().y );
   ecal.initializeECal();
   ecal.triggerlogic();
-  // ecal.colorthelogic();
-  //ecal.logicboarder();
+  ecal.colorthelogic();
+  ecal.logicboarder();
+  ecal.indexnodes();
   //ecal.specs();
 
   while( window.isOpen() ) {
@@ -44,7 +45,7 @@ int main() {
       window.clear(sf::Color(220,220,220));
     else
       window.clear(sf::Color::Black);
-
+    
     window.setView( view );
 
     // UPDATING
