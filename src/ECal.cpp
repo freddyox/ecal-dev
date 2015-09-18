@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iterator>
 #include <algorithm>
+#include <iomanip>
 
 template <typename ForwardIt>
 ForwardIt next(ForwardIt it, 
@@ -63,7 +64,7 @@ ECal::ECal(float x, float y){
   maxclustersize = 32;
   increment = 80; 
   if( maxclustersize == 32 ) {
-    clustercut = 2.1;
+    clustercut = 2.5;
   }
   if( maxclustersize == 64 ) {
     clustercut = 4.1;
@@ -251,7 +252,8 @@ void ECal::initializeECal() {
 void ECal::triggerlogic() {
 
   //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=30; i<38; i++ ) {
+  for( int i=30; i<40; i++ ) {
+    if( i==30 || i==31 || i==32 || i==39 ) {
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
@@ -334,6 +336,7 @@ void ECal::triggerlogic() {
     }
     // Add to global logic vector used throughout the rest of the code
     global_logic.push_back( final );
+    }
   }
 }
 
@@ -566,7 +569,7 @@ void ECal::logicboarder() {
   }  
 }
 
-void ECal::specs(){
+void ECal::specs() {
   // Spit out useful ECal information:
   std::cout << "Total modules: " << count << std::endl;
   std::cout << "Type 42: " << count42 << std::endl;
@@ -582,6 +585,39 @@ void ECal::specs(){
   std::cout << "Number of nodes with " << increment << " mm spacing: " << countnodes << std::endl;
 
   std::cout << "Cluster sum = " << maxclustersize << " found by using rectangular cuts of size " << clustercut << std::endl;
+}
+
+void ECal::logicinfo() {
+  // Spit out a text file with cell number + location in x and y (mm) relative
+  // to the center of ECal
+  
+  std::ofstream logic_file("logic.txt");
+  if( logic_file.is_open() ) {
+    logic_file << "# Units are in mm. ECal is shifted by +40 mm in y relative to previous output." << std::endl;
+    logic_file << "# Coordinates are relative to ECal center, negative y numbers mean top of ECal in G4SBS" << std::endl;
+    logic_file << "# Number of logic patterns = " << global_logic.size() << std::endl;
+    logic_file << "# Type 42: " << count42 << std::endl;
+    logic_file << "# Type 40: " << count40 << std::endl;
+    logic_file << "# Type 38: " << count38 << std::endl;
+    logic_file << "# Total number of modules: " << count << std::endl;
+    logic_file << std::endl;
+    logic_file << std::setw(5) << "#cell" << std::setw(5) << "x" 
+	       << std::setw(5) << "y"    << std::setw(7) << "size" << std::endl; 
+    
+    for( glit = global_logic.begin(); glit != global_logic.end(); glit++ ) {
+      for( mapit = glit->begin(); mapit != glit->end(); mapit++ ) {
+	sf::Vector2f temp = mapit->second.getPosition() - center;
+	sf::Vector2f size = mapit->second.getSize();
+	
+	logic_file << std::setw(5) << mapit->first << std::setw(6) << temp.x 
+		   << std::setw(6) << temp.y       << std::setw(5) << size.x << std::endl; 
+      }
+      logic_file << "######################" << std::endl;
+    }
+  }
+  else std::cerr << "Error opening text output." << std::endl;
+  
+  logic_file.close();
 }
 
 void ECal::controldrawings(sf::Time elapsed) {

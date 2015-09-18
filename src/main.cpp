@@ -32,6 +32,7 @@ int main() {
   ecal.colorthelogic();
   ecal.logicboarder();
   ecal.indexnodes();
+  ecal.logicinfo();
   //ecal.specs();
 
   while( window.isOpen() ) {

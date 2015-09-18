@@ -72,5 +72,6 @@ public:
   bool onoroff() {return crescent;}
   void indexnodes();
   bool index() { return indexthenodes; }
+  void logicinfo();
 };
 #endif
