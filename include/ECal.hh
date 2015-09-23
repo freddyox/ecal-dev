@@ -18,7 +18,7 @@ private:
   int ecalminy, ecalmaxy, ecalminx, ecalmaxx;
   int countnodes;
   int maxclustersize;
-  float clustercut;
+  float clustercutx, clustercutxneg, clustercuty;
 
   // MODULE and LOGIC Properties
   sf::Vector2f s42, s40, s38;

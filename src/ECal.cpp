@@ -64,10 +64,12 @@ ECal::ECal(float x, float y){
   maxclustersize = 32;
   increment = 80; 
   if( maxclustersize == 32 ) {
-    clustercut = 2.5;
+    clustercutx = 2.1;
+    clustercuty = 4.1;
   }
   if( maxclustersize == 64 ) {
-    clustercut = 4.1;
+    clustercutx = 4.1;
+    clustercuty = 4.1;
   }
   nodeR = 5.0;
   node.setRadius( nodeR );
@@ -252,8 +254,8 @@ void ECal::initializeECal() {
 void ECal::triggerlogic() {
 
   //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=30; i<40; i++ ) {
-    if( i==30 || i==31 || i==32 || i==39 ) {
+  for( int i=50; i<70; i++ ) {
+    if( i==50 || i==51 || i==61 || i==62 ) {
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
@@ -263,17 +265,23 @@ void ECal::triggerlogic() {
     std::map<int,int>::iterator cells;
     std::set<int> cells_taken;
     std::set<int>::iterator cellset;
-
+    std::vector<float> size_in_x;
+    std::set<float>::iterator vit;
+    std::set<float> size_in_y;
+    
     bool taken = true;
 
     cluster.clear();
     cellsafe.clear();
     cells_taken.clear();
+    size_in_x.clear();
+    size_in_y.clear();
     final.clear();
 
     // Locate the center of a logic pattern
     float mindistance;
     int closest_cell = -1;
+    float maximumy;
     for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ){
       sf::Vector2f temp = (*mapit).second.getPosition();
       sf::Vector2f D = nodetemp - temp;
@@ -281,11 +289,14 @@ void ECal::triggerlogic() {
       if( closest_cell == -1 || distance < mindistance ){
 	mindistance = distance;
 	closest_cell = mapit->first;
+	maximumy = temp.y;
       }
     }
     cluster[n++] = modmap[closest_cell];
     cellsafe[m++] = closest_cell;
     cells_taken.insert( closest_cell );
+    size_in_x.push_back( maximumy );
+    size_in_y.insert( maximumy );
     
     // Nearest neighbors routine
     clusterit = cluster.begin();
@@ -304,22 +315,37 @@ void ECal::triggerlogic() {
 	  sf::Vector2f Dnode = neighbors - nodetemp;
 	  float distance = sqrt( pow(Dclust.x,2) + pow(Dclust.y,2) );
 	  
-	  if( fabs(Dnode.x) < clustercut*size42 && fabs(Dnode.y) < clustercut*size42 && cluster.size() < maxclustersize && distance < 1.3*size42 ) {
+	  // if( fabs(Dnode.x) < clustercutx*size42 && fabs(Dnode.y) < clustercuty*size42 && cluster.size() < maxclustersize && distance < 1.2*size42 ) {
 
-	    taken =  cells_taken.find( clustit->first ) != cells_taken.end(); 
+	  if( fabs(Dnode.x) < clustercutx*size42 && fabs(Dnode.y) < clustercuty*size42 && cluster.size() < maxclustersize && distance < 1.2*size42 ) {
 	    
+	    taken =  cells_taken.find( clustit->first ) != cells_taken.end(); 
+	    int mycount_in_x = 0;
+	    int mycount_in_y = 0;
 	    if( !taken ) {
-	      if( cells_taken.size() < maxclustersize ) {
-		cellsafe[ m++ ] = clustit->first;
-		cluster[ n++ ] = clustit->second;
-		cells_taken.insert( clustit->first );
+	      size_in_x.push_back( neighbors.y );
+	      size_in_y.insert( neighbors.y );
+	      mycount_in_x = std::count( size_in_x.begin(), size_in_x.end(), neighbors.y );
+	      mycount_in_y = size_in_y.size(); 
+
+	      if( cells_taken.size() < maxclustersize ) {	      
+		if( mycount_in_x <= 4 && mycount_in_y <= 8 ) {
+		  cellsafe[ m++ ] = clustit->first;
+		  cluster[ n++ ] = clustit->second;
+		  cells_taken.insert( clustit->first );
+		}
 	      }
+	      
 	    }
 	  }	    	  
 	}   
       } 
       ++clusterit;
     }
+    // for( vit = size_in_y.begin(); vit != size_in_y.end(); vit++ ) {
+    //   std::cout << *vit << std::endl;
+    // }
+    // std::cout << size_in_y.size() << std::endl;
     
     // Change color of clusters - overlaps handled in colorthelogic() 
     // ***this routine is necessary to make a map of cell number and shape
@@ -584,7 +610,7 @@ void ECal::specs() {
 
   std::cout << "Number of nodes with " << increment << " mm spacing: " << countnodes << std::endl;
 
-  std::cout << "Cluster sum = " << maxclustersize << " found by using rectangular cuts of size " << clustercut << std::endl;
+  std::cout << "Cluster sum = " << maxclustersize << std::endl;
 }
 
 void ECal::logicinfo() {
