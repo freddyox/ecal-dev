@@ -41,7 +41,7 @@ private:
 
   // NODE Properties
   float nodeR;
-  int increment;
+  int increment,incrementy;
   sf::CircleShape node;
   std::vector<sf::CircleShape> nodes;
   std::vector<sf::CircleShape>::iterator nodit;

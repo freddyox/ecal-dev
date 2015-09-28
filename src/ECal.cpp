@@ -63,6 +63,7 @@ ECal::ECal(float x, float y){
   // Make Generic Node
   maxclustersize = 32;
   increment = 80; 
+  incrementy = 160;
   if( maxclustersize == 32 ) {
     clustercutx = 2.1;
     clustercuty = 4.1;
@@ -210,9 +211,9 @@ void ECal::initializeECal() {
   sf::Vector2f boarderSize(0.5*boarder.getSize().x, 0.5*boarder.getSize().y);
 
   float totalX = 2.0*boarderSize.x - increment;
-  float totalY = 2.0*boarderSize.y - increment;
+  float totalY = 2.0*boarderSize.y - incrementy;
   int numberX = int(totalX)/increment + 1; 
-  int numberY = int(totalY)/increment + 1;
+  int numberY = int(totalY)/incrementy + 1;
 
   // Start Top Left then move in by (increment,increment), then iterate
   sf::Vector2f inc(increment,increment);
@@ -221,7 +222,7 @@ void ECal::initializeECal() {
   // Rows then columns
   for( int row=0; row<numberY; row++ ) {
     for( int col=0; col<numberX; col++ ) {
-      sf::Vector2f tempnode(start.x + col*increment, start.y + row*increment + fabs(nodeYoffset) );
+      sf::Vector2f tempnode(start.x + col*increment, start.y + row*incrementy + fabs(nodeYoffset) );
 
       for( modit = modules.begin(); modit != modules.end(); modit++ ) {
 	// Peak at next row
@@ -254,8 +255,8 @@ void ECal::initializeECal() {
 void ECal::triggerlogic() {
 
   //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=50; i<70; i++ ) {
-    if( i==50 || i==51 || i==61 || i==62 ) {
+  for( int i=151; i<155; i++ ) {
+    if( i%1==0 ) {
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
@@ -314,8 +315,6 @@ void ECal::triggerlogic() {
 	  sf::Vector2f Dclust = neighbors - centerlogic;
 	  sf::Vector2f Dnode = neighbors - nodetemp;
 	  float distance = sqrt( pow(Dclust.x,2) + pow(Dclust.y,2) );
-	  
-	  // if( fabs(Dnode.x) < clustercutx*size42 && fabs(Dnode.y) < clustercuty*size42 && cluster.size() < maxclustersize && distance < 1.2*size42 ) {
 
 	  if( fabs(Dnode.x) < clustercutx*size42 && fabs(Dnode.y) < clustercuty*size42 && cluster.size() < maxclustersize && distance < 1.2*size42 ) {
 	    
@@ -620,7 +619,7 @@ void ECal::logicinfo() {
   std::ofstream logic_file("logic.txt");
   if( logic_file.is_open() ) {
     logic_file << "# Units are in mm. ECal is shifted by +40 mm in y relative to previous output." << std::endl;
-    logic_file << "# Coordinates are relative to ECal center, negative y numbers mean top of ECal in G4SBS" << std::endl;
+    logic_file << "# Coordinates are relative to ECal center, same system as G4SBS" << std::endl;
     logic_file << "# Number of logic patterns = " << global_logic.size() << std::endl;
     logic_file << "# Type 42: " << count42 << std::endl;
     logic_file << "# Type 40: " << count40 << std::endl;
@@ -636,7 +635,7 @@ void ECal::logicinfo() {
 	sf::Vector2f size = mapit->second.getSize();
 	
 	logic_file << std::setw(5) << mapit->first << std::setw(6) << temp.x 
-		   << std::setw(6) << temp.y       << std::setw(5) << size.x << std::endl; 
+		   << std::setw(6) << -1*temp.y    << std::setw(5) << size.x << std::endl; 
       }
       logic_file << "######################" << std::endl;
     }
