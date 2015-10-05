@@ -253,10 +253,32 @@ void ECal::initializeECal() {
 }  
 
 void ECal::triggerlogic() {
+  // LOGIC GROUPS WITH LESS THAN 32 MODULES
+  /////////////////////////////////////////
+  std::ifstream bad_logic;
+  bad_logic.open("nodes_less_32.txt");
+  std::string line;
+  std::vector<int> badnodes;
+  std::vector<int>::iterator vit;
+  if( bad_logic.is_open() ) {
+    while( getline(bad_logic,line) ) {
+      if( line[0] != '#' ) {
+	int node;
+	std::stringstream first(line);
+	first >> node;
+	badnodes.push_back( node-1 );
+      }
+    }
+  }
+  else std::cerr << "Error opening text" << std::endl;
+  bad_logic.close();
+  ///////////////////////////////////////////
 
-  //for( int i=0; i<nodes.size(); i++ ) {
-  for( int i=151; i<155; i++ ) {
-    if( i%1==0 ) {
+  for( int i=0; i<nodes.size(); i++ ) {
+    for( vit = badnodes.begin(); vit != badnodes.end(); vit++ ) {
+      if( i==*vit) {
+    //for( int i=150; i<151; i++ ) {
+    
     sf::Vector2f nodetemp = nodes[i].getPosition();
     sf::Vector2f centerlogic(0,0);
     sf::Vector2f neighbors(0,0);
@@ -361,6 +383,7 @@ void ECal::triggerlogic() {
     }
     // Add to global logic vector used throughout the rest of the code
     global_logic.push_back( final );
+      }
     }
   }
 }
