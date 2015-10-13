@@ -20,6 +20,10 @@ private:
   int maxclustersize;
   float clustercutx, clustercutxneg, clustercuty;
 
+  // Trigger Efficiency Calorimeter Shape
+  // we need to exclude the perimeter modules
+  std::map<int, std::vector<int> > triggermap;
+
   // MODULE and LOGIC Properties
   sf::Vector2f s42, s40, s38;
   sf::RectangleShape module42, module40, module38;
@@ -27,7 +31,7 @@ private:
 
   std::vector<sf::RectangleShape> modules;
   std::vector<sf::RectangleShape>::iterator modit;
-  std::map<int,sf::RectangleShape> modmap, cluster, final;
+  std::map<int,sf::RectangleShape> modmap, cluster, final, modmapTE;
   std::map<int,sf::RectangleShape>::iterator mapit, clustit, clusterit, lastone;
 
   std::vector<std::map<int,sf::RectangleShape> > global_logic;

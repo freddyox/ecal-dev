@@ -124,7 +124,7 @@ ECal::ECal(float x, float y){
   }
   textind.setFont(font);
   textind.setCharacterSize( 15 );
-  textind.setColor( sf::Color::White );
+  textind.setColor( sf::Color::Black );
 
   // Handle boarders
   lines = sf::VertexArray(sf::LinesStrip,2);
@@ -147,6 +147,61 @@ void ECal::initializeECal() {
   layout.open("ecal_layout.txt");
   std::string line;
   float yoffset = 40.0;
+
+  // Trigger Efficiency Calorimeter Shape
+  // we need to exclude the perimeter modules
+  std::set<int>  cellnumberTE;
+  std::set<int>::iterator vit;
+  std::set<int> TEcells;
+  TEcells.insert( 1728 );
+  TEcells.insert( 1737 );
+  TEcells.insert( 1738 );
+  TEcells.insert( 1739 );
+  TEcells.insert( 1740 );
+  TEcells.insert( 1677 );
+  TEcells.insert( 1678 );
+  TEcells.insert( 1679 );
+  TEcells.insert( 1680 );
+  TEcells.insert( 1681 );
+  TEcells.insert( 1601 );
+  TEcells.insert( 1602 );
+  TEcells.insert( 1603 );
+  TEcells.insert( 1604 );
+  TEcells.insert( 1605 );
+  TEcells.insert( 1511 );
+  TEcells.insert( 1512 );
+  TEcells.insert( 1513 );
+  TEcells.insert( 1409 );
+  TEcells.insert( 1410 );
+  TEcells.insert( 1411 );
+  TEcells.insert( 1412 );
+  TEcells.insert( 1413 );
+  TEcells.insert( 1184 );
+  TEcells.insert( 1185 );
+  TEcells.insert( 1180 );
+  TEcells.insert( 1181 );
+  TEcells.insert( 1011 );
+  TEcells.insert( 1068 );
+  TEcells.insert( 1069 );
+  TEcells.insert( 635 );
+  TEcells.insert( 578 );
+  TEcells.insert( 527 );
+  TEcells.insert( 360 );
+  TEcells.insert( 361 );
+  TEcells.insert( 362 );
+  TEcells.insert( 266 );
+  TEcells.insert( 179 );
+  TEcells.insert( 180 );
+  TEcells.insert( 103 );
+  TEcells.insert( 104 );
+  TEcells.insert( 105 );
+  TEcells.insert( 43 );
+  TEcells.insert( 44 );
+  TEcells.insert( 45 );
+  TEcells.insert( 34 );
+  TEcells.insert( 35 );
+
+
   if( layout.is_open() ) {
     while( std::getline( layout, line) && line[0]!='#') {}    
     
@@ -159,7 +214,28 @@ void ECal::initializeECal() {
       maxx = (x > maxx) ? x : maxx;
       minx = (x < minx) ? x : minx;
       maxy = (y > maxy) ? y : maxy;
-      miny = (y < miny) ? y : miny;
+      miny = (y < miny) ? y : miny;  
+
+      // Work on defining TE ECal crescent shape (exclude perimeter modules)
+      // I will take advantage of row/col & ncols. If row or col = 1, then 
+      // it can be ignored. Also, if col = ncol, then it can be ignored as well
+      bool found = false;
+      if( row != 1 ) {
+	if( col != 1 ) { 
+	  if( col != ncol ) {
+	    if( row != 80 ) {
+	      for(vit = TEcells.begin(); vit != TEcells.end(); vit++ ) {
+		if( *vit == cell ) {
+		  found = true;
+		}
+	      }
+	      if( !found ) {
+		cellnumberTE.insert( cell );
+	      }
+	    }
+	  }
+	}
+      }
 
       if( type == 42 ) {
 	module42.setPosition( cellposition );
@@ -192,7 +268,20 @@ void ECal::initializeECal() {
   ecalmaxy = maxy;
   ecalminx = minx;
   ecalmaxx = maxx;
-  
+
+  // Output of Trigger Efficiency Layout
+  // std::ofstream output("cellnumbersTE.txt");
+  // if(output.is_open() ) {
+  //   for(vit = cellnumberTE.begin(); vit != cellnumberTE.end(); vit++ ) {
+  //     for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ) {
+  // 	if( *vit == mapit->first ) {
+  // 	  mapit->second.setFillColor( sf::Color::Blue );
+  // 	}
+  //     }
+  //     output << *vit << std::endl;
+  //   }
+  // }
+
   // Make transparent rectangle that boarders ECal
   float xmoduleoffset = (38 + 40) / 2.0;
   float ymoduleoffset = (38 + 42) / 2.0;
@@ -275,115 +364,116 @@ void ECal::triggerlogic() {
   ///////////////////////////////////////////
 
   for( int i=0; i<nodes.size(); i++ ) {
-    for( vit = badnodes.begin(); vit != badnodes.end(); vit++ ) {
-      if( i==*vit) {
-    //for( int i=150; i<151; i++ ) {
+    // for( int i=150; i<151; i++ ) {
+    // if( i==21 || i==31  || i==43  || i==57  || i==71  || i==85  ||
+    // 	i==98 || i==111 || i==124 || i==137 || i==151 || i==165 ||
+    // 	i==179 || i ==191 || i==202 || i==211 ) {
+    if( i==1000 ) {
+      sf::Vector2f nodetemp = nodes[i].getPosition();
+      sf::Vector2f centerlogic(0,0);
+      sf::Vector2f neighbors(0,0);
+      int n = 0;
+      int m = 0;
+      std::map<int,int> cellsafe;
+      std::map<int,int>::iterator cells;
+      std::set<int> cells_taken;
+      std::set<int>::iterator cellset;
+      std::vector<float> size_in_x;
+      std::set<float>::iterator vit;
+      std::set<float> size_in_y;
     
-    sf::Vector2f nodetemp = nodes[i].getPosition();
-    sf::Vector2f centerlogic(0,0);
-    sf::Vector2f neighbors(0,0);
-    int n = 0;
-    int m = 0;
-    std::map<int,int> cellsafe;
-    std::map<int,int>::iterator cells;
-    std::set<int> cells_taken;
-    std::set<int>::iterator cellset;
-    std::vector<float> size_in_x;
-    std::set<float>::iterator vit;
-    std::set<float> size_in_y;
-    
-    bool taken = true;
+      bool taken = true;
 
-    cluster.clear();
-    cellsafe.clear();
-    cells_taken.clear();
-    size_in_x.clear();
-    size_in_y.clear();
-    final.clear();
+      cluster.clear();
+      cellsafe.clear();
+      cells_taken.clear();
+      size_in_x.clear();
+      size_in_y.clear();
+      final.clear();
 
-    // Locate the center of a logic pattern
-    float mindistance;
-    int closest_cell = -1;
-    float maximumy;
-    for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ){
-      sf::Vector2f temp = (*mapit).second.getPosition();
-      sf::Vector2f D = nodetemp - temp;
-      float distance = sqrt( pow(D.x,2) + pow(D.y,2) );
-      if( closest_cell == -1 || distance < mindistance ){
-	mindistance = distance;
-	closest_cell = mapit->first;
-	maximumy = temp.y;
+      // Locate the center of a logic pattern
+      float mindistance;
+      int closest_cell = -1;
+      float maximumy;
+      for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ){
+	sf::Vector2f temp = (*mapit).second.getPosition();
+	sf::Vector2f D = nodetemp - temp;
+	float distance = sqrt( pow(D.x,2) + pow(D.y,2) );
+	if( closest_cell == -1 || distance < mindistance ){
+	  mindistance = distance;
+	  closest_cell = mapit->first;
+	  maximumy = temp.y;
+	}
       }
-    }
-    cluster[n++] = modmap[closest_cell];
-    cellsafe[m++] = closest_cell;
-    cells_taken.insert( closest_cell );
-    size_in_x.push_back( maximumy );
-    size_in_y.insert( maximumy );
+      cluster[n++] = modmap[closest_cell];
+      cellsafe[m++] = closest_cell;
+      cells_taken.insert( closest_cell );
+      size_in_x.push_back( maximumy );
+      size_in_y.insert( maximumy );
     
-    // Nearest neighbors routine
-    clusterit = cluster.begin();
-    while( clusterit != cluster.end() && cluster.size() < maxclustersize ){
-      centerlogic = clusterit->second.getPosition();
-      int clusterindex = clusterit->first; //position in cluster array
-      int clustercell = cellsafe[clusterindex];
+      // Nearest neighbors routine
+      clusterit = cluster.begin();
+      while( clusterit != cluster.end() && cluster.size() < maxclustersize ){
+	centerlogic = clusterit->second.getPosition();
+	int clusterindex = clusterit->first; //position in cluster array
+	int clustercell = cellsafe[clusterindex];
 
-      // Get the closest modules and add to Logic Cluster
-      for( clustit = modmap.begin(); clustit != modmap.end(); clustit++ ) {
-	int clustcell = clustit->first;
-	if( clustcell != clustercell ){
-	  taken = true;
-	  neighbors = clustit->second.getPosition();
-	  sf::Vector2f Dclust = neighbors - centerlogic;
-	  sf::Vector2f Dnode = neighbors - nodetemp;
-	  float distance = sqrt( pow(Dclust.x,2) + pow(Dclust.y,2) );
+	// Get the closest modules and add to Logic Cluster
+	for( clustit = modmap.begin(); clustit != modmap.end(); clustit++ ) {
+	  int clustcell = clustit->first;
+	  if( clustcell != clustercell ){
+	    taken = true;
+	    neighbors = clustit->second.getPosition();
+	    sf::Vector2f Dclust = neighbors - centerlogic;
+	    sf::Vector2f Dnode = neighbors - nodetemp;
+	    float distance = sqrt( pow(Dclust.x,2) + pow(Dclust.y,2) );
 
-	  if( fabs(Dnode.x) < clustercutx*size42 && fabs(Dnode.y) < clustercuty*size42 && cluster.size() < maxclustersize && distance < 1.2*size42 ) {
+	    if( fabs(Dnode.x) < clustercutx*size42 && fabs(Dnode.y) < clustercuty*size42 && cluster.size() < maxclustersize && distance < 1.2*size42 ) {
 	    
-	    taken =  cells_taken.find( clustit->first ) != cells_taken.end(); 
-	    int mycount_in_x = 0;
-	    int mycount_in_y = 0;
-	    if( !taken ) {
-	      size_in_x.push_back( neighbors.y );
-	      size_in_y.insert( neighbors.y );
-	      mycount_in_x = std::count( size_in_x.begin(), size_in_x.end(), neighbors.y );
-	      mycount_in_y = size_in_y.size(); 
+	      taken =  cells_taken.find( clustit->first ) != cells_taken.end(); 
+	      int mycount_in_x = 0;
+	      int mycount_in_y = 0;
+	      if( !taken ) {
+		size_in_x.push_back( neighbors.y );
+		size_in_y.insert( neighbors.y );
+		mycount_in_x = std::count( size_in_x.begin(), size_in_x.end(), neighbors.y );
+		mycount_in_y = size_in_y.size(); 
 
-	      if( cells_taken.size() < maxclustersize ) {	      
-		if( mycount_in_x <= 4 && mycount_in_y <= 8 ) {
-		  cellsafe[ m++ ] = clustit->first;
-		  cluster[ n++ ] = clustit->second;
-		  cells_taken.insert( clustit->first );
+		if( cells_taken.size() < maxclustersize ) {	      
+		  if( mycount_in_x <= 4 && mycount_in_y <= 8 ) {
+		    cellsafe[ m++ ] = clustit->first;
+		    cluster[ n++ ] = clustit->second;
+		    cells_taken.insert( clustit->first );
+		  }
 		}
-	      }
 	      
-	    }
-	  }	    	  
-	}   
-      } 
-      ++clusterit;
-    }
-    // for( vit = size_in_y.begin(); vit != size_in_y.end(); vit++ ) {
-    //   std::cout << *vit << std::endl;
-    // }
-    // std::cout << size_in_y.size() << std::endl;
+	      }
+	    }	    	  
+	  }   
+	} 
+	++clusterit;
+      }
+      // for( vit = size_in_y.begin(); vit != size_in_y.end(); vit++ ) {
+      //   std::cout << *vit << std::endl;
+      // }
+      // std::cout << size_in_y.size() << std::endl;
     
-    // Change color of clusters - overlaps handled in colorthelogic() 
-    // ***this routine is necessary to make a map of cell number and shape
-    for( clustit = cluster.begin(); clustit != cluster.end(); clustit++ ) {
-      int temp = i % colors.size();
-      (*clustit).second.setFillColor( colors[temp] );
-      for( cells = cellsafe.begin(); cells != cellsafe.end(); cells++ ) {
-	// counting variable must be equal
-    	if( clustit->first == cells->first ) {
-    	  // make the final map 
-    	  final[cells->second] = clustit->second;
-    	}
+      // Change color of clusters - overlaps handled in colorthelogic() 
+      // ***this routine is necessary to make a map of cell number and shape
+      for( clustit = cluster.begin(); clustit != cluster.end(); clustit++ ) {
+	int temp = i % colors.size();
+	(*clustit).second.setFillColor( colors[temp] );
+	for( cells = cellsafe.begin(); cells != cellsafe.end(); cells++ ) {
+	  // counting variable must be equal
+	  if( clustit->first == cells->first ) {
+	    // make the final map 
+	    final[cells->second] = clustit->second;
+	  }
+	}
       }
-    }
-    // Add to global logic vector used throughout the rest of the code
-    global_logic.push_back( final );
-      }
+      // Add to global logic vector used throughout the rest of the code
+      global_logic.push_back( final );
+      
     }
   }
 }
@@ -733,6 +823,24 @@ void ECal::indexnodes() {
     textind.setPosition( final.x, final.y );
     textnodes.push_back( textind );
   }
+
+  // INDEX MODULES IF NEEDED
+  // offset=sf::Vector2f(-2.0,-2.0);
+  // for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ) { 
+  //   // Handle the index text - int conversion to string
+  //   std::stringstream temp;
+  //   temp << nodeindex;
+  //   std::string indexstring = temp.str();
+  //   nodeindex++;
+
+  //   // Grab node position
+  //   sf::Vector2f tempposition = mapit->second.getPosition();
+  //   sf::Vector2f final = tempposition+offset;
+  //   // Handle the text properties
+  //   textind.setString( indexstring );
+  //   textind.setPosition( final.x, final.y );
+  //   textnodes.push_back( textind );
+  // }
 }
 
 void ECal::draw(sf::RenderTarget& target, sf::RenderStates) const{
