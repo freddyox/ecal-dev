@@ -136,10 +136,12 @@ ECal::ECal(float x, float y){
   control = false;
   crescent = false;
   indexthenodes = false;
+  indexthemods = false;
   count1 = 0;
   count2 = 0;
   count3 = 0;
   count4 = 0;
+  count5 = 0;
 }
 
 void ECal::initializeECal() {
@@ -158,20 +160,20 @@ void ECal::initializeECal() {
   TEcells.insert( 1738 );
   TEcells.insert( 1739 );
   TEcells.insert( 1740 );
-  TEcells.insert( 1677 );
+  TEcells.insert( 1677 ); // Might need to be removed.
   TEcells.insert( 1678 );
   TEcells.insert( 1679 );
   TEcells.insert( 1680 );
   TEcells.insert( 1681 );
-  TEcells.insert( 1601 );
+  //TEcells.insert( 1601 );
   TEcells.insert( 1602 );
   TEcells.insert( 1603 );
   TEcells.insert( 1604 );
   TEcells.insert( 1605 );
-  TEcells.insert( 1511 );
+  //TEcells.insert( 1511 );
   TEcells.insert( 1512 );
   TEcells.insert( 1513 );
-  TEcells.insert( 1409 );
+  //TEcells.insert( 1409 );
   TEcells.insert( 1410 );
   TEcells.insert( 1411 );
   TEcells.insert( 1412 );
@@ -270,17 +272,18 @@ void ECal::initializeECal() {
   ecalmaxx = maxx;
 
   // Output of Trigger Efficiency Layout
-  // std::ofstream output("cellnumbersTE.txt");
-  // if(output.is_open() ) {
-  //   for(vit = cellnumberTE.begin(); vit != cellnumberTE.end(); vit++ ) {
-  //     for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ) {
-  // 	if( *vit == mapit->first ) {
-  // 	  mapit->second.setFillColor( sf::Color::Blue );
-  // 	}
-  //     }
-  //     output << *vit << std::endl;
-  //   }
-  // }
+  std::ofstream output("TE_layout_oct13.txt");
+  if(output.is_open() ) {
+    for(vit = cellnumberTE.begin(); vit != cellnumberTE.end(); vit++ ) {
+      for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ) {
+  	if( *vit == mapit->first ) {
+  	  //mapit->second.setFillColor( sf::Color::Blue );
+  	}
+      }
+      output << *vit << std::endl;
+    }
+  }
+  output.close();
 
   // Make transparent rectangle that boarders ECal
   float xmoduleoffset = (38 + 40) / 2.0;
@@ -800,13 +803,22 @@ void ECal::controldrawings(sf::Time elapsed) {
     	indexthenodes = false;
       }
     } 
+    if( sf::Keyboard::isKeyPressed(sf::Keyboard::C) ) {
+      indexthemods = true;
+      control = false;
+      time = 0;
+      count5++;
+      if(count5%2==0){
+    	indexthemods = false;
+      }
+    } 
   }
 }
 
 void ECal::indexnodes() {
   int nodeindex = 1;
-  
-  sf::Vector2f offset( 2*nodeR, -2*nodeR );
+  int modindex = 1;
+  sf::Vector2f offset( 2*nodeR, 0.0 );
   
   for( nodit = nodes.begin(); nodit != nodes.end(); nodit++ ) { 
     // Handle the index text - int conversion to string
@@ -825,22 +837,26 @@ void ECal::indexnodes() {
   }
 
   // INDEX MODULES IF NEEDED
-  // offset=sf::Vector2f(-2.0,-2.0);
-  // for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ) { 
-  //   // Handle the index text - int conversion to string
-  //   std::stringstream temp;
-  //   temp << nodeindex;
-  //   std::string indexstring = temp.str();
-  //   nodeindex++;
+  textind.setColor( sf::Color::White );
+  for( mapit = modmap.begin(); mapit != modmap.end(); mapit++ ) { 
+    // Handle the index text - int conversion to string
+    std::stringstream temp;
+    temp << modindex;
+    std::string indexstring = temp.str();
+    modindex++;
 
-  //   // Grab node position
-  //   sf::Vector2f tempposition = mapit->second.getPosition();
-  //   sf::Vector2f final = tempposition+offset;
-  //   // Handle the text properties
-  //   textind.setString( indexstring );
-  //   textind.setPosition( final.x, final.y );
-  //   textnodes.push_back( textind );
-  // }
+    // Handle the text properties
+    textind.setString( indexstring );
+    sf::FloatRect tmprect = textind.getLocalBounds();
+    offset = sf::Vector2f(-tmprect.width / 2.0, -tmprect.height / 2.0 );
+
+    // Grab node position
+    sf::Vector2f tempposition = mapit->second.getPosition();
+    sf::Vector2f final = tempposition+offset;
+    
+    textind.setPosition( final.x, final.y );
+    textmods.push_back( textind );
+  }
 }
 
 void ECal::draw(sf::RenderTarget& target, sf::RenderStates) const{
@@ -881,6 +897,11 @@ void ECal::draw(sf::RenderTarget& target, sf::RenderStates) const{
   std::vector<sf::Text>::const_iterator textit;
   if( indexthenodes ) {
     for( textit = textnodes.begin(); textit != textnodes.end(); textit++ ) {
+      target.draw( *textit );
+    }
+  }
+  if( indexthemods ) {
+    for( textit = textmods.begin(); textit != textmods.end(); textit++ ) {
       target.draw( *textit );
     }
   }

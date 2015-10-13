@@ -49,7 +49,7 @@ private:
   sf::CircleShape node;
   std::vector<sf::CircleShape> nodes;
   std::vector<sf::CircleShape>::iterator nodit;
-  std::vector<sf::Text> textnodes;
+  std::vector<sf::Text> textnodes, textmods;
   sf::Font font;
   sf::Text textind;
 
@@ -59,8 +59,8 @@ private:
   bool logcolors;
   bool crescent;
   bool control;
-  bool indexthenodes;
-  int count1, count2, count3, count4;
+  bool indexthenodes, indexthemods;
+  int count1, count2, count3, count4, count5;
 
 public:
   ECal(float,float);
