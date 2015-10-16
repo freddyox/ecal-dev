@@ -368,10 +368,10 @@ void ECal::triggerlogic() {
 
   for( int i=0; i<nodes.size(); i++ ) {
     // for( int i=150; i<151; i++ ) {
-    // if( i==21 || i==31  || i==43  || i==57  || i==71  || i==85  ||
-    // 	i==98 || i==111 || i==124 || i==137 || i==151 || i==165 ||
-    // 	i==179 || i ==191 || i==202 || i==211 ) {
-    if( i==1000 ) {
+    if( i==20 || i==31  || i==43  || i==57  || i==71  || i==85  ||
+    	i==98 || i==111 || i==124 || i==137 || i==151 || i==165 ||
+    	i==179 || i ==191 || i==202 || i==211 ) {
+    //if( i==1000 ) {
       sf::Vector2f nodetemp = nodes[i].getPosition();
       sf::Vector2f centerlogic(0,0);
       sf::Vector2f neighbors(0,0);
@@ -728,11 +728,10 @@ void ECal::specs() {
   std::cout << "Cluster sum = " << maxclustersize << std::endl;
 }
 
-void ECal::logicinfo() {
+void ECal::logicinfo() {  
   // Spit out a text file with cell number + location in x and y (mm) relative
   // to the center of ECal
-  
-  std::ofstream logic_file("logic.txt");
+  std::ofstream logic_file("ecal_triggerlogic_oct15_FINAL.txt");
   if( logic_file.is_open() ) {
     logic_file << "# Units are in mm. ECal is shifted by +40 mm in y relative to previous output." << std::endl;
     logic_file << "# Coordinates are relative to ECal center, same system as G4SBS" << std::endl;

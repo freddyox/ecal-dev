@@ -1,9 +1,0 @@
-# Units are in mm. ECal is shifted by +40 mm in y relative to previous output.
-# Coordinates are relative to ECal center, same system as G4SBS
-# Number of logic patterns = 0
-# Type 42: 999
-# Type 40: 697
-# Type 38: 81
-# Total number of modules: 1777
-
-#cell    x    y   size
